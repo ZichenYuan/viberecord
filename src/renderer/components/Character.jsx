@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useSpring } from 'framer-motion';
 const { ipcRenderer } = window.require('electron');
 
 function Character() {
@@ -13,6 +13,34 @@ function Character() {
   const videoRef = useRef(null);
   const moveTimeoutRef = useRef(null);
   const streamRef = useRef(null);
+  const leftArmRef = useRef(null);
+  const rightArmRef = useRef(null);
+
+  // Spring-animated angles using SVG native rotate(angle, cx, cy)
+  const leftArmAngle = useSpring(45, { stiffness: 300, damping: 20 });
+  const rightArmAngle = useSpring(-45, { stiffness: 300, damping: 20 });
+
+  useEffect(() => {
+    leftArmAngle.set(leftArmRaised ? -45 : 45);
+  }, [leftArmRaised]);
+
+  useEffect(() => {
+    rightArmAngle.set(rightArmRaised ? 45 : -45);
+  }, [rightArmRaised]);
+
+  useEffect(() => {
+    const unsubLeft = leftArmAngle.on('change', v => {
+      if (leftArmRef.current) {
+        leftArmRef.current.setAttribute('transform', `rotate(${v}, 40, 55)`);
+      }
+    });
+    const unsubRight = rightArmAngle.on('change', v => {
+      if (rightArmRef.current) {
+        rightArmRef.current.setAttribute('transform', `rotate(${v}, 60, 55)`);
+      }
+    });
+    return () => { unsubLeft(); unsubRight(); };
+  }, []);
 
   useEffect(() => {
     // Initialize webcam immediately on mount
@@ -20,7 +48,15 @@ function Character() {
       try {
         console.log('Requesting webcam access...');
 
-        // Get all video devices first
+        // First request basic camera access to trigger permission prompt
+        const initialStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false
+        });
+        // Stop initial stream so we can re-open with preferred device
+        initialStream.getTracks().forEach(track => track.stop());
+
+        // Now enumerate devices (labels are available after permission is granted)
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(device => device.kind === 'videoinput');
 
@@ -35,13 +71,17 @@ function Character() {
 
         console.log('Using camera:', builtInCamera?.label);
 
-        // Request camera permission with specific device
+        // Re-open camera with preferred device
+        const videoConstraints = {
+          width: { ideal: 320 },
+          height: { ideal: 240 }
+        };
+        if (builtInCamera && builtInCamera.deviceId) {
+          videoConstraints.deviceId = { exact: builtInCamera.deviceId };
+        }
+
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            deviceId: builtInCamera ? { exact: builtInCamera.deviceId } : undefined,
-            width: { ideal: 320 },
-            height: { ideal: 240 }
-          },
+          video: videoConstraints,
           audio: false
         });
 
@@ -194,55 +234,31 @@ function Character() {
             />
           </g>
 
-          <g transform="translate(40, 55)">
-            <motion.g
-              className="left-arm"
-              animate={{
-                rotate: leftArmRaised ? -75 : 0,
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 20
-              }}
-              style={{ transformOrigin: '0px 0px' }}
-            >
-              <line
-                x1="0"
-                y1="0"
-                x2="-25"
-                y2="0"
-                stroke={style.color}
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-            </motion.g>
-          </g>
+          <line
+            ref={leftArmRef}
+            className="left-arm"
+            x1="40"
+            y1="55"
+            x2="15"
+            y2="55"
+            stroke={style.color}
+            strokeWidth="4"
+            strokeLinecap="round"
+            transform="rotate(45, 40, 55)"
+          />
 
-          <g transform="translate(60, 55)">
-            <motion.g
-              className="right-arm"
-              animate={{
-                rotate: rightArmRaised ? 75 : 0,
-              }}
-              transition={{
-                type: "spring",
-                stiffness: 300,
-                damping: 20
-              }}
-              style={{ transformOrigin: '0px 0px' }}
-            >
-              <line
-                x1="0"
-                y1="0"
-                x2="25"
-                y2="0"
-                stroke={style.color}
-                strokeWidth="4"
-                strokeLinecap="round"
-              />
-            </motion.g>
-          </g>
+          <line
+            ref={rightArmRef}
+            className="right-arm"
+            x1="60"
+            y1="55"
+            x2="85"
+            y2="55"
+            stroke={style.color}
+            strokeWidth="4"
+            strokeLinecap="round"
+            transform="rotate(-45, 60, 55)"
+          />
 
           <g className="legs">
             <rect
