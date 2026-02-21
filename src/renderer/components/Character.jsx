@@ -7,7 +7,7 @@ function Character() {
   const [rightArmRaised, setRightArmRaised] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [moveDirection, setMoveDirection] = useState(null);
-  const [characterStyle, setCharacterStyle] = useState(0);
+  const [characterStyle, setCharacterStyle] = useState('bubble');
   const [isRecording, setIsRecording] = useState(false);
   const [webcamError, setWebcamError] = useState(false);
   const videoRef = useRef(null);
@@ -17,15 +17,15 @@ function Character() {
   const rightArmRef = useRef(null);
 
   // Spring-animated angles using SVG native rotate(angle, cx, cy)
-  const leftArmAngle = useSpring(45, { stiffness: 300, damping: 20 });
-  const rightArmAngle = useSpring(-45, { stiffness: 300, damping: 20 });
+  const leftArmAngle = useSpring(-45, { stiffness: 300, damping: 20 });
+  const rightArmAngle = useSpring(45, { stiffness: 300, damping: 20 });
 
   useEffect(() => {
-    leftArmAngle.set(leftArmRaised ? -45 : 45);
+    leftArmAngle.set(leftArmRaised ? 35 : -45);
   }, [leftArmRaised]);
 
   useEffect(() => {
-    rightArmAngle.set(rightArmRaised ? 45 : -45);
+    rightArmAngle.set(rightArmRaised ? -35 : 45);
   }, [rightArmRaised]);
 
   useEffect(() => {
@@ -160,16 +160,108 @@ function Character() {
     };
   }, []);
 
-  const getCharacterStyle = () => {
-    const styles = {
-      0: { color: '#4A5568', name: 'Basic' },
-      1: { color: '#718096', name: 'Robot' },
-      2: { color: '#2D3748', name: 'Ninja' }
-    };
-    return styles[characterStyle] || styles[0];
+  const bodyColor = '#4A5568';
+
+  const renderHead = () => (
+    <div className="character-head">
+      {!webcamError ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="webcam-feed"
+        />
+      ) : (
+        <div
+          className="webcam-error"
+          onClick={() => window.location.reload()}
+          style={{ cursor: 'pointer', fontSize: '30px' }}
+          title="Click to retry camera"
+        >
+          📷
+        </div>
+      )}
+    </div>
+  );
+
+  const renderBubble = () => renderHead();
+
+  const renderCharacter = () => (
+    <>
+      {renderHead()}
+      <svg
+        className="character-body"
+        viewBox="0 0 100 150"
+        width="100"
+        height="150"
+      >
+        <g className="torso">
+          <rect
+            x="40"
+            y="50"
+            width="20"
+            height="40"
+            fill={bodyColor}
+            rx="2"
+          />
+        </g>
+
+        <line
+          ref={leftArmRef}
+          className="left-arm"
+          x1="40"
+          y1="55"
+          x2="15"
+          y2="55"
+          stroke={bodyColor}
+          strokeWidth="4"
+          strokeLinecap="round"
+          transform="rotate(-45, 40, 55)"
+        />
+
+        <line
+          ref={rightArmRef}
+          className="right-arm"
+          x1="60"
+          y1="55"
+          x2="85"
+          y2="55"
+          stroke={bodyColor}
+          strokeWidth="4"
+          strokeLinecap="round"
+          transform="rotate(45, 60, 55)"
+        />
+
+        <g className="legs">
+          <rect
+            x="42"
+            y="90"
+            width="6"
+            height="25"
+            fill={bodyColor}
+            rx="2"
+          />
+          <rect
+            x="52"
+            y="90"
+            width="6"
+            height="25"
+            fill={bodyColor}
+            rx="2"
+          />
+        </g>
+      </svg>
+    </>
+  );
+
+  // Add new modes here
+  const modes = {
+    bubble: renderBubble,
+    character: renderCharacter,
   };
 
-  const style = getCharacterStyle();
+  const renderMode = modes[characterStyle] || modes.bubble;
 
   return (
     <div className="character-container">
@@ -196,89 +288,7 @@ function Character() {
           repeat: isMoving ? Infinity : 0,
         }}
       >
-        <div className="character-head">
-          {!webcamError ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="webcam-feed"
-            />
-          ) : (
-            <div
-              className="webcam-error"
-              onClick={() => window.location.reload()}
-              style={{ cursor: 'pointer', fontSize: '30px' }}
-              title="Click to retry camera"
-            >
-              📷
-            </div>
-          )}
-        </div>
-
-        <svg
-          className="character-body"
-          viewBox="0 0 100 150"
-          width="100"
-          height="150"
-        >
-          <g className="torso">
-            <rect
-              x="40"
-              y="50"
-              width="20"
-              height="40"
-              fill={style.color}
-              rx="2"
-            />
-          </g>
-
-          <line
-            ref={leftArmRef}
-            className="left-arm"
-            x1="40"
-            y1="55"
-            x2="15"
-            y2="55"
-            stroke={style.color}
-            strokeWidth="4"
-            strokeLinecap="round"
-            transform="rotate(45, 40, 55)"
-          />
-
-          <line
-            ref={rightArmRef}
-            className="right-arm"
-            x1="60"
-            y1="55"
-            x2="85"
-            y2="55"
-            stroke={style.color}
-            strokeWidth="4"
-            strokeLinecap="round"
-            transform="rotate(-45, 60, 55)"
-          />
-
-          <g className="legs">
-            <rect
-              x="42"
-              y="90"
-              width="6"
-              height="25"
-              fill={style.color}
-              rx="2"
-            />
-            <rect
-              x="52"
-              y="90"
-              width="6"
-              height="25"
-              fill={style.color}
-              rx="2"
-            />
-          </g>
-        </svg>
+        {renderMode()}
       </motion.div>
     </div>
   );

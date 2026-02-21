@@ -74,30 +74,25 @@
   font-weight: 500;
 }
 
-.style-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.style-buttons button {
-  flex: 1;
-  padding: 8px;
+.style-dropdown {
+  width: 100%;
+  padding: 8px 12px;
   background: #edf2f7;
   border: 2px solid transparent;
   border-radius: 6px;
   cursor: pointer;
+  font-size: 14px;
+  color: #4a5568;
+  outline: none;
   transition: all 0.2s ease;
-  font-size: 12px;
 }
 
-.style-buttons button:hover {
+.style-dropdown:hover {
   background: #e2e8f0;
 }
 
-.style-buttons button.active {
-  background: #667eea;
-  color: white;
-  border-color: #5a67d8;
+.style-dropdown:focus {
+  border-color: #667eea;
 }
 
 .mic-toggle {

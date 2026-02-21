@@ -5,7 +5,7 @@ const { ipcRenderer } = window.require('electron');
 function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(null);
-  const [selectedStyle, setSelectedStyle] = useState(0);
+  const [selectedStyle, setSelectedStyle] = useState('bubble');
   const [micEnabled, setMicEnabled] = useState(true);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -180,26 +180,14 @@ function App() {
         <div className="controls">
           <div className="style-selector">
             <label>Character Style:</label>
-            <div className="style-buttons">
-              <button
-                className={selectedStyle === 0 ? 'active' : ''}
-                onClick={() => handleStyleChange(0)}
-              >
-                Basic
-              </button>
-              <button
-                className={selectedStyle === 1 ? 'active' : ''}
-                onClick={() => handleStyleChange(1)}
-              >
-                Robot
-              </button>
-              <button
-                className={selectedStyle === 2 ? 'active' : ''}
-                onClick={() => handleStyleChange(2)}
-              >
-                Ninja
-              </button>
-            </div>
+            <select
+              className="style-dropdown"
+              value={selectedStyle}
+              onChange={(e) => handleStyleChange(e.target.value)}
+            >
+              <option value="bubble">Bubble</option>
+              <option value="character">Character</option>
+            </select>
           </div>
 
           <div className="mic-toggle">

@@ -4,7 +4,7 @@
   "description": "Gamified screen recording tool with floating avatar",
   "main": "src/main/main.js",
   "scripts": {
-    "start": "concurrently \"npm run webpack\" \"wait-on http://localhost:3000 && electron .\"",
+    "start": "npx webpack serve --mode development & (sleep 5 && npx electron .)",
     "webpack": "webpack serve --mode development",
     "build": "webpack --mode production && electron-builder",
     "electron": "electron .",
