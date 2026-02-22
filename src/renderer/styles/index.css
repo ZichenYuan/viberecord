@@ -95,6 +95,67 @@
   border-color: #667eea;
 }
 
+.size-control {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+.size-control label {
+  display: block;
+  margin-bottom: 8px;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.size-slider {
+  width: calc(100% - 60px);
+  height: 6px;
+  background: #edf2f7;
+  border-radius: 3px;
+  outline: none;
+  margin-right: 10px;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.size-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.size-slider::-webkit-slider-thumb:hover {
+  background: #5a67d8;
+}
+
+.size-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
+}
+
+.size-slider::-moz-range-thumb:hover {
+  background: #5a67d8;
+}
+
+.size-value {
+  font-size: 14px;
+  color: #667eea;
+  font-weight: 600;
+  min-width: 50px;
+  display: inline-block;
+  text-align: right;
+}
+
 .mic-toggle {
   margin-top: 15px;
 }
@@ -164,13 +225,16 @@
 
 /* Character Window Styles */
 .character-container {
-  width: 200px;
-  height: 300px;
+  width: 100%;
+  height: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 20px;
+  justify-content: center;
+  padding: 50px;
+  box-sizing: border-box;
+  overflow: visible;
 }
 
 .recording-indicator {
@@ -220,16 +284,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
 }
 
 .character-head {
-  width: 80px;
-  height: 80px;
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid #4a5568;
   background: #2d3748;
-  margin-bottom: -35px;
   z-index: 1;
   position: relative;
 }
@@ -250,5 +312,5 @@
 }
 
 .character-body {
-  margin-top: -10px;
+  display: block;
 }

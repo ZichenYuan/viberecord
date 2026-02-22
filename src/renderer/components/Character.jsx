@@ -9,6 +9,7 @@ function Character() {
   const [moveDirection, setMoveDirection] = useState(null);
   const [characterStyle, setCharacterStyle] = useState('bubble');
   const [isRecording, setIsRecording] = useState(false);
+  const [characterSize, setCharacterSize] = useState(100);
   const [webcamError, setWebcamError] = useState(false);
   const videoRef = useRef(null);
   const moveTimeoutRef = useRef(null);
@@ -147,12 +148,17 @@ function Character() {
       setIsRecording(status);
     });
 
+    ipcRenderer.on('update-size', (event, size) => {
+      setCharacterSize(size);
+    });
+
     // Cleanup
     return () => {
       ipcRenderer.removeAllListeners('move');
       ipcRenderer.removeAllListeners('gesture');
       ipcRenderer.removeAllListeners('update-style');
       ipcRenderer.removeAllListeners('recording-status');
+      ipcRenderer.removeAllListeners('update-size');
 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -162,40 +168,56 @@ function Character() {
 
   const bodyColor = '#4A5568';
 
-  const renderHead = () => (
-    <div className="character-head">
-      {!webcamError ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="webcam-feed"
-        />
-      ) : (
-        <div
-          className="webcam-error"
-          onClick={() => window.location.reload()}
-          style={{ cursor: 'pointer', fontSize: '30px' }}
-          title="Click to retry camera"
-        >
-          📷
-        </div>
-      )}
-    </div>
-  );
+  const renderHead = () => {
+    const headScale = characterSize / 100;
+    // Make head smaller in character mode for better proportions
+    const headSizeMultiplier = characterStyle === 'character' ? 0.7 : 1;
+    const headSize = 80 * headScale * headSizeMultiplier;
+
+    const headStyle = {
+      width: `${headSize}px`,
+      height: `${headSize}px`,
+      marginBottom: characterStyle === 'character' ? `-${35 * headScale}px` : '0'
+    };
+
+    return (
+      <div className="character-head" style={headStyle}>
+        {!webcamError ? (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="webcam-feed"
+          />
+        ) : (
+          <div
+            className="webcam-error"
+            onClick={() => window.location.reload()}
+            style={{ cursor: 'pointer', fontSize: `${30 * headScale}px` }}
+            title="Click to retry camera"
+          >
+            📷
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderBubble = () => renderHead();
 
-  const renderCharacter = () => (
-    <>
-      {renderHead()}
-      <svg
-        className="character-body"
-        viewBox="0 0 100 150"
-        width="100"
-        height="150"
-      >
+  const renderCharacter = () => {
+    const bodyScale = characterSize / 100;
+    return (
+      <>
+        {renderHead()}
+        <svg
+          className="character-body"
+          viewBox="0 0 100 150"
+          width={100 * bodyScale}
+          height={150 * bodyScale}
+          style={{ marginTop: `-${15 * bodyScale}px` }}
+        >
         <g className="torso">
           <rect
             x="40"
@@ -253,7 +275,8 @@ function Character() {
         </g>
       </svg>
     </>
-  );
+    );
+  };
 
   // Add new modes here
   const modes = {

@@ -7,6 +7,7 @@ function App() {
   const [countdown, setCountdown] = useState(null);
   const [selectedStyle, setSelectedStyle] = useState('bubble');
   const [micEnabled, setMicEnabled] = useState(true);
+  const [characterSize, setCharacterSize] = useState(100);
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
 
@@ -149,6 +150,11 @@ function App() {
     ipcRenderer.send('update-character-style', style);
   };
 
+  const handleSizeChange = (size) => {
+    setCharacterSize(size);
+    ipcRenderer.send('update-character-size', size);
+  };
+
   return (
     <div className="control-panel">
       {countdown && (
@@ -188,6 +194,20 @@ function App() {
               <option value="bubble">Bubble</option>
               <option value="character">Character</option>
             </select>
+          </div>
+
+          <div className="size-control">
+            <label>Character Size:</label>
+            <input
+              type="range"
+              className="size-slider"
+              min="100"
+              max="400"
+              value={characterSize}
+              onChange={(e) => handleSizeChange(parseInt(e.target.value))}
+              disabled={isRecording}
+            />
+            <span className="size-value">{characterSize}%</span>
           </div>
 
           <div className="mic-toggle">

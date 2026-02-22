@@ -11,8 +11,8 @@ let recordedChunks = [];
 
 function createCharacterWindow() {
   characterWindow = new BrowserWindow({
-    width: 200,
-    height: 300,
+    width: 1200,  // Fixed large size to accommodate max scale (300 * 4)
+    height: 1600, // Fixed large size to accommodate max scale (400 * 4)
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -235,6 +235,28 @@ ipcMain.on('stop-recording', (event, videoData) => {
 ipcMain.on('update-character-style', (event, style) => {
   if (characterWindow) {
     characterWindow.webContents.send('update-style', style);
+  }
+});
+
+ipcMain.on('update-character-size', (event, size) => {
+  if (characterWindow) {
+    // Use a fixed large window size that can accommodate the largest scale
+    const maxScale = 4; // 400%
+    const baseWidth = 300;
+    const baseHeight = 400;
+
+    // Set window to maximum size to accommodate all scales
+    const windowWidth = baseWidth * maxScale;
+    const windowHeight = baseHeight * maxScale;
+
+    // Only resize if window size is different
+    const [currentWidth, currentHeight] = characterWindow.getSize();
+    if (currentWidth !== windowWidth || currentHeight !== windowHeight) {
+      characterWindow.setSize(windowWidth, windowHeight);
+    }
+
+    // Send the size update to the character component
+    characterWindow.webContents.send('update-size', size);
   }
 });
 
