@@ -193,6 +193,7 @@ function App() {
             >
               <option value="bubble">Bubble</option>
               <option value="character">Character</option>
+              <option value="square">Square Man</option>
             </select>
           </div>
 

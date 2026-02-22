@@ -22,26 +22,52 @@ function Character() {
   const rightArmAngle = useSpring(45, { stiffness: 300, damping: 20 });
 
   useEffect(() => {
-    leftArmAngle.set(leftArmRaised ? 35 : -45);
-  }, [leftArmRaised]);
+    if (characterStyle === 'square') {
+      // Square Man angles: more horizontal positioning
+      leftArmAngle.set(leftArmRaised ? 40 : -10);
+    } else {
+      // Character mode angles
+      leftArmAngle.set(leftArmRaised ? 35 : -45);
+    }
+  }, [leftArmRaised, characterStyle]);
 
   useEffect(() => {
-    rightArmAngle.set(rightArmRaised ? -35 : 45);
-  }, [rightArmRaised]);
+    if (characterStyle === 'square') {
+      // Square Man angles: more horizontal positioning
+      rightArmAngle.set(rightArmRaised ? -40 : 10);
+    } else {
+      // Character mode angles
+      rightArmAngle.set(rightArmRaised ? -35 : 45);
+    }
+  }, [rightArmRaised, characterStyle]);
 
   useEffect(() => {
     const unsubLeft = leftArmAngle.on('change', v => {
       if (leftArmRef.current) {
-        leftArmRef.current.setAttribute('transform', `rotate(${v}, 40, 55)`);
+        // Different pivot points based on character mode
+        if (characterStyle === 'square') {
+          // Square Man: pivot from shoulder connection (right edge of left arm)
+          leftArmRef.current.setAttribute('transform', `rotate(${v}, 33, 55)`);
+        } else {
+          // Character mode: original pivot
+          leftArmRef.current.setAttribute('transform', `rotate(${v}, 40, 55)`);
+        }
       }
     });
     const unsubRight = rightArmAngle.on('change', v => {
       if (rightArmRef.current) {
-        rightArmRef.current.setAttribute('transform', `rotate(${v}, 60, 55)`);
+        // Different pivot points based on character mode
+        if (characterStyle === 'square') {
+          // Square Man: pivot from shoulder connection (left edge of right arm)
+          rightArmRef.current.setAttribute('transform', `rotate(${v}, 87, 55)`);
+        } else {
+          // Character mode: original pivot
+          rightArmRef.current.setAttribute('transform', `rotate(${v}, 60, 55)`);
+        }
       }
     });
     return () => { unsubLeft(); unsubRight(); };
-  }, []);
+  }, [characterStyle]);
 
   useEffect(() => {
     // Initialize webcam immediately on mount
@@ -171,17 +197,24 @@ function Character() {
   const renderHead = () => {
     const headScale = characterSize / 100;
     // Make head smaller in character mode for better proportions
-    const headSizeMultiplier = characterStyle === 'character' ? 0.7 : 1;
+    const headSizeMultiplier = (characterStyle === 'character' || characterStyle === 'square') ? 0.7 : 1;
     const headSize = 80 * headScale * headSizeMultiplier;
+
+    // Different styling for square mode
+    const isSquare = characterStyle === 'square';
+    const isCharacter = characterStyle === 'character';
 
     const headStyle = {
       width: `${headSize}px`,
       height: `${headSize}px`,
-      marginBottom: characterStyle === 'character' ? `-${35 * headScale}px` : '0'
+      marginBottom: (isCharacter || isSquare) ? `-${35 * headScale}px` : '0',
+      borderRadius: isSquare ? '0' : '50%' // Square for square, circle for others
     };
 
+    const headClasses = `character-head ${isSquare ? 'square-head' : ''}`;
+
     return (
-      <div className="character-head" style={headStyle}>
+      <div className={headClasses} style={headStyle}>
         {!webcamError ? (
           <video
             ref={videoRef}
@@ -189,6 +222,10 @@ function Character() {
             playsInline
             muted
             className="webcam-feed"
+            style={{
+              imageRendering: isSquare ? 'pixelated' : 'auto',
+              filter: isSquare ? 'contrast(1.1) saturate(1.2)' : 'none'
+            }}
           />
         ) : (
           <div
@@ -205,6 +242,89 @@ function Character() {
   };
 
   const renderBubble = () => renderHead();
+
+  const renderSquare = () => {
+    const bodyScale = characterSize / 100;
+    return (
+      <>
+        {renderHead()}
+        <svg
+          className="square-body"
+          viewBox="0 0 120 160"
+          width={120 * bodyScale}
+          height={160 * bodyScale}
+          style={{ marginTop: `-${15 * bodyScale}px` }}
+        >
+        <g className="square-torso">
+          {/* Main body - more rectangular/blocky */}
+          <rect
+            x="35"
+            y="50"
+            width="50"
+            height="60"
+            fill="#4A90E2"
+            stroke="#2D5A87"
+            strokeWidth="2"
+          />
+          {/* Body detail lines for 3D effect */}
+          <rect x="37" y="52" width="46" height="4" fill="#5BA0F2" />
+          <rect x="37" y="58" width="46" height="2" fill="#3A7BC8" />
+        </g>
+
+        {/* Animated left arm */}
+        <rect
+          ref={leftArmRef}
+          x="15"
+          y="55"
+          width="18"
+          height="35"
+          fill="#4A90E2"
+          stroke="#2D5A87"
+          strokeWidth="2"
+          transform="rotate(-10, 33, 55)"
+        />
+
+        {/* Animated right arm */}
+        <rect
+          ref={rightArmRef}
+          x="87"
+          y="55"
+          width="18"
+          height="35"
+          fill="#4A90E2"
+          stroke="#2D5A87"
+          strokeWidth="2"
+          transform="rotate(10, 87, 55)"
+        />
+
+        {/* Blocky legs */}
+        <g className="square-legs">
+          <rect
+            x="42"
+            y="110"
+            width="15"
+            height="40"
+            fill="#654321"
+            stroke="#4A3218"
+            strokeWidth="2"
+          />
+          <rect
+            x="63"
+            y="110"
+            width="15"
+            height="40"
+            fill="#654321"
+            stroke="#4A3218"
+            strokeWidth="2"
+          />
+          {/* Leg details */}
+          <rect x="44" y="112" width="11" height="3" fill="#7A5228" />
+          <rect x="65" y="112" width="11" height="3" fill="#7A5228" />
+        </g>
+      </svg>
+    </>
+    );
+  };
 
   const renderCharacter = () => {
     const bodyScale = characterSize / 100;
@@ -282,6 +402,7 @@ function Character() {
   const modes = {
     bubble: renderBubble,
     character: renderCharacter,
+    square: renderSquare,
   };
 
   const renderMode = modes[characterStyle] || modes.bubble;
