@@ -8,6 +8,7 @@ function App() {
   const [selectedStyle, setSelectedStyle] = useState('bubble');
   const [micEnabled, setMicEnabled] = useState(true);
   const [characterSize, setCharacterSize] = useState(100);
+  const [selectedSkin, setSelectedSkin] = useState('default');
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
 
@@ -155,6 +156,11 @@ function App() {
     ipcRenderer.send('update-character-size', size);
   };
 
+  const handleSkinChange = (skin) => {
+    setSelectedSkin(skin);
+    ipcRenderer.send('update-character-skin', skin);
+  };
+
   return (
     <div className="control-panel">
       {countdown && (
@@ -196,6 +202,43 @@ function App() {
               <option value="square">Square Man</option>
             </select>
           </div>
+
+          {selectedStyle === 'square' && (
+            <div className="skin-selector">
+              <label>Square Man Skin:</label>
+              <select
+                className="style-dropdown"
+                value={selectedSkin}
+                onChange={(e) => handleSkinChange(e.target.value)}
+                disabled={isRecording}
+              >
+                <option value="default">Default</option>
+                <option value="knight">Knight</option>
+                <option value="robot">Robot</option>
+                <option value="lumberjack">Lumberjack</option>
+                <option value="ninja">Ninja</option>
+                <option value="pirate">Pirate</option>
+              </select>
+            </div>
+          )}
+
+          {selectedStyle === 'character' && (
+            <div className="skin-selector">
+              <label>Character Skin:</label>
+              <select
+                className="style-dropdown"
+                value={selectedSkin}
+                onChange={(e) => handleSkinChange(e.target.value)}
+                disabled={isRecording}
+              >
+                <option value="default">Default</option>
+                <option value="mickey">Mickey</option>
+                <option value="bumblebee">Bee</option>
+                <option value="bear">Bear</option>
+                <option value="cat">Cat</option>
+              </select>
+            </div>
+          )}
 
           <div className="size-control">
             <label>Character Size:</label>

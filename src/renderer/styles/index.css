@@ -66,7 +66,12 @@
   margin-bottom: 15px;
 }
 
-.style-selector label {
+.skin-selector {
+  margin-bottom: 15px;
+}
+
+.style-selector label,
+.skin-selector label {
   display: block;
   margin-bottom: 8px;
   color: #4a5568;
@@ -328,7 +333,7 @@
   transition: border-radius 0.3s ease;
 }
 
-/* Pixel border effect for square mode */
+/* Pixel border effect for square mode - legacy (kept for non-dynamic cases) */
 .square-head {
   border: 4px solid #654321;
   background: #8B4513;
@@ -339,4 +344,12 @@
   image-rendering: pixelated;
   image-rendering: -moz-crisp-edges;
   image-rendering: crisp-edges;
+}
+
+/* Dynamic square head styling - colors set via inline styles */
+.square-head-dynamic {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  /* Border, background, and box-shadow are set dynamically via inline styles */
 }

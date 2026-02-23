@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useSpring } from 'framer-motion';
+import { applySkin } from '../assets/skins/square-skins.js';
+import { applyCharacterSkin, renderCharacterEffect } from '../assets/skins/character-skins.js';
 const { ipcRenderer } = window.require('electron');
 
 function Character() {
@@ -10,6 +12,7 @@ function Character() {
   const [characterStyle, setCharacterStyle] = useState('bubble');
   const [isRecording, setIsRecording] = useState(false);
   const [characterSize, setCharacterSize] = useState(100);
+  const [selectedSkin, setSelectedSkin] = useState('default');
   const [webcamError, setWebcamError] = useState(false);
   const videoRef = useRef(null);
   const moveTimeoutRef = useRef(null);
@@ -178,6 +181,10 @@ function Character() {
       setCharacterSize(size);
     });
 
+    ipcRenderer.on('update-skin', (event, skin) => {
+      setSelectedSkin(skin);
+    });
+
     // Cleanup
     return () => {
       ipcRenderer.removeAllListeners('move');
@@ -185,6 +192,7 @@ function Character() {
       ipcRenderer.removeAllListeners('update-style');
       ipcRenderer.removeAllListeners('recording-status');
       ipcRenderer.removeAllListeners('update-size');
+      ipcRenderer.removeAllListeners('update-skin');
 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
@@ -204,39 +212,103 @@ function Character() {
     const isSquare = characterStyle === 'square';
     const isCharacter = characterStyle === 'character';
 
+    // Get skin-specific head frame colors for Square Man and Character
+    const squareSkin = isSquare ? applySkin(selectedSkin) : null;
+    const characterSkin = isCharacter ? applyCharacterSkin(selectedSkin) : null;
+
+    const headFrameColor = isSquare ? squareSkin.colors.torsoStroke :
+                          isCharacter ? characterSkin.colors.headFrame : null;
+    const headBackgroundColor = isSquare ? squareSkin.colors.torso :
+                               isCharacter ? characterSkin.colors.headBackground : null;
+
     const headStyle = {
       width: `${headSize}px`,
       height: `${headSize}px`,
       marginBottom: (isCharacter || isSquare) ? `-${35 * headScale}px` : '0',
-      borderRadius: isSquare ? '0' : '50%' // Square for square, circle for others
+      borderRadius: isSquare ? '0' : '50%', // Square for square, circle for others
+      ...((isSquare || isCharacter) && headFrameColor && {
+        border: `${isSquare ? '4px' : '3px'} solid ${headFrameColor}`,
+        backgroundColor: headBackgroundColor,
+        ...(isSquare && {
+          boxShadow: `
+            inset 2px 2px 0 rgba(255,255,255,0.3),
+            inset -2px -2px 0 rgba(0,0,0,0.3),
+            0 0 0 1px ${headFrameColor}
+          `
+        }),
+        ...(isCharacter && {
+          boxShadow: `
+            inset 1px 1px 0 rgba(255,255,255,0.2),
+            inset -1px -1px 0 rgba(0,0,0,0.2)
+          `
+        })
+      })
     };
 
-    const headClasses = `character-head ${isSquare ? 'square-head' : ''}`;
+    const headClasses = `character-head ${isSquare ? 'square-head-dynamic' : ''}`;
 
     return (
-      <div className={headClasses} style={headStyle}>
-        {!webcamError ? (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="webcam-feed"
+      <div style={{ position: 'relative' }}>
+        {/* Character head extras (like Mickey ears) */}
+        {isCharacter && characterSkin?.extras?.head && (
+          <svg
+            width={headSize + 80}
+            height={headSize + 100}
             style={{
-              imageRendering: isSquare ? 'pixelated' : 'auto',
-              filter: isSquare ? 'contrast(1.1) saturate(1.2)' : 'none'
+              position: 'absolute',
+              top: -50,
+              left: -40,
+              pointerEvents: 'none',
+              zIndex: 0
             }}
-          />
-        ) : (
-          <div
-            className="webcam-error"
-            onClick={() => window.location.reload()}
-            style={{ cursor: 'pointer', fontSize: `${30 * headScale}px` }}
-            title="Click to retry camera"
           >
-            📷
-          </div>
+            {characterSkin.extras.head.map((extra, i) => (
+              extra.type === 'circle' ? (
+                selectedSkin === 'cat' ? (
+                  <polygon
+                    key={`head-${i}`}
+                    points={`${headSize/2 + 40 + (extra.x * headScale)},${headSize/2 + 50 + (extra.y * headScale) + (extra.radius * headScale)} ${headSize/2 + 40 + (extra.x * headScale) - (extra.radius * headScale * 0.8)},${headSize/2 + 50 + (extra.y * headScale) - (extra.radius * headScale * 0.5)} ${headSize/2 + 40 + (extra.x * headScale) + (extra.radius * headScale * 0.8)},${headSize/2 + 50 + (extra.y * headScale) - (extra.radius * headScale * 0.5)}`}
+                    fill={extra.color}
+                    transform={`rotate(${extra.x < 0 ? 15 : -15}, ${headSize/2 + 40 + (extra.x * headScale)}, ${headSize/2 + 50 + (extra.y * headScale)})`}
+                  />
+                ) : (
+                  <circle
+                    key={`head-${i}`}
+                    cx={headSize/2 + 40 + (extra.x * headScale)}
+                    cy={headSize/2 + 50 + (extra.y * headScale)}
+                    r={extra.radius * headScale}
+                    fill={extra.color}
+                  />
+                )
+              ) : null
+            ))}
+          </svg>
         )}
+
+        <div className={headClasses} style={{...headStyle, position: 'relative', zIndex: 1}}>
+          {!webcamError ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="webcam-feed"
+              style={{
+                imageRendering: isSquare ? 'pixelated' : 'auto',
+                filter: isSquare ? 'contrast(1.1) saturate(1.2)' : 'none'
+              }}
+            />
+          ) : (
+            <div
+              className="webcam-error"
+              onClick={() => window.location.reload()}
+              style={{ cursor: 'pointer', fontSize: `${30 * headScale}px` }}
+              title="Click to retry camera"
+            >
+              📷
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -245,6 +317,8 @@ function Character() {
 
   const renderSquare = () => {
     const bodyScale = characterSize / 100;
+    const skin = applySkin(selectedSkin);
+
     return (
       <>
         {renderHead()}
@@ -255,79 +329,150 @@ function Character() {
           height={160 * bodyScale}
           style={{ marginTop: `-${15 * bodyScale}px` }}
         >
-        <g className="square-torso">
-          {/* Main body - more rectangular/blocky */}
-          <rect
-            x="35"
-            y="50"
-            width="50"
-            height="60"
-            fill="#4A90E2"
-            stroke="#2D5A87"
-            strokeWidth="2"
-          />
-          {/* Body detail lines for 3D effect */}
-          <rect x="37" y="52" width="46" height="4" fill="#5BA0F2" />
-          <rect x="37" y="58" width="46" height="2" fill="#3A7BC8" />
-        </g>
+          {/* Pattern definitions for textures */}
+          <defs>
+            {selectedSkin === 'lumberjack' && (
+              <pattern id="plaid-pattern" patternUnits="userSpaceOnUse" width="8" height="8">
+                <rect width="8" height="8" fill={skin.colors.torso}/>
+                <rect x="0" y="0" width="4" height="8" fill={skin.colors.torsoStroke}/>
+                <rect x="0" y="0" width="8" height="4" fill={skin.colors.torsoStroke}/>
+              </pattern>
+            )}
+            {selectedSkin === 'robot' && (
+              <pattern id="circuit-pattern" patternUnits="userSpaceOnUse" width="6" height="6">
+                <rect width="6" height="6" fill={skin.colors.torso}/>
+                <line x1="1" y1="2" x2="5" y2="2" stroke="#00FF88" strokeWidth="0.3"/>
+                <line x1="1" y1="4" x2="5" y2="4" stroke="#00FF88" strokeWidth="0.3"/>
+                <circle cx="3" cy="2" r="0.5" fill="#00FF88"/>
+              </pattern>
+            )}
+          </defs>
 
-        {/* Animated left arm */}
-        <rect
-          ref={leftArmRef}
-          x="15"
-          y="55"
-          width="18"
-          height="35"
-          fill="#4A90E2"
-          stroke="#2D5A87"
-          strokeWidth="2"
-          transform="rotate(-10, 33, 55)"
-        />
+          <g className="square-torso">
+            {/* Main torso with skin-specific styling */}
+            <rect
+              x="35"
+              y="50"
+              width="50"
+              height="60"
+              fill={selectedSkin === 'lumberjack' ? 'url(#plaid-pattern)' :
+                    selectedSkin === 'robot' ? 'url(#circuit-pattern)' :
+                    skin.colors.torso}
+              stroke={skin.colors.torsoStroke}
+              strokeWidth="2"
+            />
 
-        {/* Animated right arm */}
-        <rect
-          ref={rightArmRef}
-          x="87"
-          y="55"
-          width="18"
-          height="35"
-          fill="#4A90E2"
-          stroke="#2D5A87"
-          strokeWidth="2"
-          transform="rotate(10, 87, 55)"
-        />
+            {/* Torso detail lines - varies by skin */}
+            {selectedSkin !== 'ninja' && (
+              <>
+                <rect x="37" y="52" width="46" height="4" fill={skin.colors.torsoDetail} />
+                <rect x="37" y="58" width="46" height="2" fill={skin.colors.torsoDetail} />
+              </>
+            )}
 
-        {/* Blocky legs */}
-        <g className="square-legs">
+            {/* Skin-specific extras on torso */}
+            {skin.extras?.torso?.map((extra, i) => (
+              <g key={i}>
+                {extra.type === 'rect' && (
+                  <rect x={extra.x} y={extra.y} width={extra.width} height={extra.height} fill={extra.color} />
+                )}
+                {extra.type === 'circle' && (
+                  <circle cx={extra.x} cy={extra.y} r={extra.radius} fill={extra.color} />
+                )}
+                {extra.type === 'cross' && (
+                  <>
+                    <rect x={extra.x + extra.width/2 - 1} y={extra.y} width="2" height={extra.height} fill={extra.color}/>
+                    <rect x={extra.x} y={extra.y + extra.height/2 - 1} width={extra.width} height="2" fill={extra.color}/>
+                  </>
+                )}
+              </g>
+            ))}
+          </g>
+
+          {/* Left arm with individual styling */}
           <rect
-            x="42"
-            y="110"
-            width="15"
-            height="40"
-            fill="#654321"
-            stroke="#4A3218"
+            ref={leftArmRef}
+            x="15"
+            y="55"
+            width="18"
+            height="35"
+            fill={skin.colors.leftArm}
+            stroke={skin.colors.armStroke}
             strokeWidth="2"
+            transform="rotate(-10, 33, 55)"
           />
+
+          {/* Left arm extras */}
+          {skin.extras?.leftArm?.map((extra, i) => (
+            <g key={`left-${i}`} transform="rotate(-10, 33, 55)">
+              {extra.type === 'circle' && (
+                <circle cx={extra.x} cy={extra.y} r={extra.radius} fill={extra.color} />
+              )}
+            </g>
+          ))}
+
+          {/* Right arm with potentially different styling */}
           <rect
-            x="63"
-            y="110"
-            width="15"
-            height="40"
-            fill="#654321"
-            stroke="#4A3218"
+            ref={rightArmRef}
+            x="87"
+            y="55"
+            width="18"
+            height="35"
+            fill={skin.colors.rightArm}
+            stroke={selectedSkin === 'lumberjack' ? '#8B4513' : skin.colors.armStroke}
             strokeWidth="2"
+            transform="rotate(10, 87, 55)"
           />
-          {/* Leg details */}
-          <rect x="44" y="112" width="11" height="3" fill="#7A5228" />
-          <rect x="65" y="112" width="11" height="3" fill="#7A5228" />
-        </g>
-      </svg>
-    </>
+
+          {/* Legs with skin-specific styling */}
+          <g className="square-legs">
+            <rect
+              x="42"
+              y="110"
+              width="15"
+              height="40"
+              fill={skin.colors.legs}
+              stroke={skin.colors.legStroke}
+              strokeWidth="2"
+            />
+            <rect
+              x="63"
+              y="110"
+              width="15"
+              height="40"
+              fill={skin.colors.legs}
+              stroke={skin.colors.legStroke}
+              strokeWidth="2"
+            />
+
+            {/* Leg details - varies by skin */}
+            {selectedSkin !== 'ninja' && (
+              <>
+                <rect x="44" y="112" width="11" height="3" fill={skin.colors.legDetail} />
+                <rect x="65" y="112" width="11" height="3" fill={skin.colors.legDetail} />
+              </>
+            )}
+
+            {/* Special leg features for certain skins */}
+            {selectedSkin === 'knight' && (
+              <>
+                {/* Chain mail texture simulation */}
+                <rect x="44" y="120" width="11" height="1" fill="#C0C0C0" />
+                <rect x="65" y="120" width="11" height="1" fill="#C0C0C0" />
+                <rect x="44" y="130" width="11" height="1" fill="#C0C0C0" />
+                <rect x="65" y="130" width="11" height="1" fill="#C0C0C0" />
+              </>
+            )}
+          </g>
+        </svg>
+      </>
     );
   };
 
   const renderCharacter = () => {
     const bodyScale = characterSize / 100;
+    const skin = applyCharacterSkin(selectedSkin);
+
     return (
       <>
         {renderHead()}
@@ -338,63 +483,149 @@ function Character() {
           height={150 * bodyScale}
           style={{ marginTop: `-${15 * bodyScale}px` }}
         >
-        <g className="torso">
-          <rect
-            x="40"
-            y="50"
-            width="20"
-            height="40"
-            fill={bodyColor}
-            rx="2"
-          />
-        </g>
+          {/* Gradient definitions for special skins */}
+          <defs>
+            {skin.gradient && (
+              <>
+                <linearGradient id="body-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor={skin.colors.body} />
+                  <stop offset="100%" stopColor={skin.colors.headBackground} />
+                </linearGradient>
+                <linearGradient id="arm-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor={skin.colors.leftArm} />
+                  <stop offset="100%" stopColor={skin.colors.body} />
+                </linearGradient>
+              </>
+            )}
+          </defs>
 
-        <line
-          ref={leftArmRef}
-          className="left-arm"
-          x1="40"
-          y1="55"
-          x2="15"
-          y2="55"
-          stroke={bodyColor}
-          strokeWidth="4"
-          strokeLinecap="round"
-          transform="rotate(-45, 40, 55)"
-        />
+          <g className="torso">
+            <rect
+              x="40"
+              y="50"
+              width="20"
+              height="30"
+              fill={skin.gradient ? 'url(#body-gradient)' : skin.colors.body}
+              rx="2"
+            />
 
-        <line
-          ref={rightArmRef}
-          className="right-arm"
-          x1="60"
-          y1="55"
-          x2="85"
-          y2="55"
-          stroke={bodyColor}
-          strokeWidth="4"
-          strokeLinecap="round"
-          transform="rotate(45, 60, 55)"
-        />
+            {/* Render skin-specific body effects */}
+            {skin.extras?.body?.map((extra, i) => (
+              <g key={i} dangerouslySetInnerHTML={{
+                __html: renderCharacterEffect(extra, 40, 50, 20, 30)
+              }} />
+            ))}
+          </g>
 
-        <g className="legs">
-          <rect
-            x="42"
-            y="90"
-            width="6"
-            height="25"
-            fill={bodyColor}
-            rx="2"
+          <line
+            ref={leftArmRef}
+            className="left-arm"
+            x1="40"
+            y1="55"
+            x2="15"
+            y2="55"
+            stroke={skin.gradient ? 'url(#arm-gradient)' : skin.colors.leftArm}
+            strokeWidth="4"
+            strokeLinecap="round"
+            transform="rotate(-45, 40, 55)"
           />
-          <rect
-            x="52"
-            y="90"
-            width="6"
-            height="25"
-            fill={bodyColor}
-            rx="2"
+
+          {/* Left arm extras */}
+          {skin.extras?.leftArm?.map((extra, i) => (
+            <g key={`left-arm-${i}`} dangerouslySetInnerHTML={{
+              __html: renderCharacterEffect(extra, 15, 55, 25, 10)
+            }} />
+          ))}
+
+          <line
+            ref={rightArmRef}
+            className="right-arm"
+            x1="60"
+            y1="55"
+            x2="85"
+            y2="55"
+            stroke={skin.gradient ? 'url(#arm-gradient)' : skin.colors.rightArm}
+            strokeWidth="4"
+            strokeLinecap="round"
+            transform="rotate(45, 60, 55)"
           />
-        </g>
-      </svg>
-    </>
+
+          {/* Right arm extras */}
+          {skin.extras?.rightArm?.map((extra, i) => (
+            <g key={`right-arm-${i}`} dangerouslySetInnerHTML={{
+              __html: renderCharacterEffect(extra, 60, 55, 25, 10)
+            }} />
+          ))}
+
+          <g className="legs">
+            <rect
+              x="42"
+              y="80"
+              width="6"
+              height={selectedSkin === 'bumblebee' ? "12" : "20"}
+              fill={skin.colors.legs}
+              rx="2"
+            />
+            <rect
+              x="52"
+              y="80"
+              width="6"
+              height={selectedSkin === 'bumblebee' ? "12" : "20"}
+              fill={skin.colors.legs}
+              rx="2"
+            />
+
+            {/* Leg extras */}
+            {skin.extras?.legs?.map((extra, i) => (
+              <g key={`legs-${i}`} dangerouslySetInnerHTML={{
+                __html: renderCharacterEffect(extra, 42, 80, 16, selectedSkin === 'bumblebee' ? 12 : 20)
+              }} />
+            ))}
+          </g>
+
+          {/* Wings - only for bumblebee */}
+          {selectedSkin === 'bumblebee' && skin.extras?.wings && (
+            <g className="wings" style={{ zIndex: -1 }}>
+              {skin.extras.wings.map((wing, i) => (
+                <g key={`wing-${i}`} dangerouslySetInnerHTML={{
+                  __html: renderCharacterEffect(wing, 0, 0, 0, 0)
+                }} />
+              ))}
+            </g>
+          )}
+
+          {/* Feet - only for Mickey */}
+          {selectedSkin === 'mickey' && (
+            <g className="feet">
+              <ellipse
+                cx="45"
+                cy="102"
+                rx="6"
+                ry="3"
+                fill="#8B4513"
+              />
+              <ellipse
+                cx="55"
+                cy="102"
+                rx="6"
+                ry="3"
+                fill="#8B4513"
+              />
+            </g>
+          )}
+
+          {/* Tail - only for cat */}
+          {selectedSkin === 'cat' && skin.extras?.tail && (
+            <g className="tail">
+              {skin.extras.tail.map((tailPart, i) => (
+                <g key={`tail-${i}`} dangerouslySetInnerHTML={{
+                  __html: renderCharacterEffect(tailPart, 0, 0, 0, 0)
+                }} />
+              ))}
+            </g>
+          )}
+        </svg>
+      </>
     );
   };
 

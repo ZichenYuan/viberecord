@@ -260,6 +260,12 @@ ipcMain.on('update-character-size', (event, size) => {
   }
 });
 
+ipcMain.on('update-character-skin', (event, skin) => {
+  if (characterWindow) {
+    characterWindow.webContents.send('update-skin', skin);
+  }
+});
+
 app.on('window-all-closed', () => {
   globalShortcut.unregisterAll();
   app.quit();
