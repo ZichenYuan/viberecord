@@ -240,6 +240,24 @@ function App() {
             </div>
           )}
 
+          {selectedStyle === 'bubble' && (
+            <div className="skin-selector">
+              <label>Bubble Skin:</label>
+              <select
+                className="style-dropdown"
+                value={selectedSkin}
+                onChange={(e) => handleSkinChange(e.target.value)}
+                disabled={isRecording}
+              >
+                <option value="default">Default</option>
+                <option value="crown">Royal Crown</option>
+                <option value="graduationCap">Graduation Cap</option>
+                <option value="cowboyHat">Cowboy Hat</option>
+                <option value="wizard">Wizard</option>
+              </select>
+            </div>
+          )}
+
           <div className="size-control">
             <label>Character Size:</label>
             <input

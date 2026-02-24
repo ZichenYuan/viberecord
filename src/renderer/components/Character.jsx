@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useSpring } from 'framer-motion';
 import { applySkin } from '../assets/skins/square-skins.js';
 import { applyCharacterSkin, renderCharacterEffect } from '../assets/skins/character-skins.js';
+import { applyBubbleSkin, renderBubbleAccessory } from '../assets/skins/bubble-skins.js';
 const { ipcRenderer } = window.require('electron');
 
 function Character() {
@@ -313,7 +314,71 @@ function Character() {
     );
   };
 
-  const renderBubble = () => renderHead();
+  const renderBubble = () => {
+    const headScale = characterSize / 100;
+    const headSizeMultiplier = 1;
+    const headSize = 80 * headScale * headSizeMultiplier;
+    const bubbleSkin = applyBubbleSkin(selectedSkin);
+
+    const headStyle = {
+      width: `${headSize}px`,
+      height: `${headSize}px`,
+      marginBottom: '0',
+      borderRadius: '50%',
+      border: `${bubbleSkin.borderWidth} solid ${bubbleSkin.borderColor}`,
+      backgroundColor: bubbleSkin.backgroundColor
+    };
+
+    return (
+      <div style={{ position: 'relative' }}>
+        {/* Bubble accessories */}
+        {bubbleSkin.accessories && bubbleSkin.accessories.length > 0 && (
+          <svg
+            width={headSize + 100}
+            height={headSize + 100}
+            style={{
+              position: 'absolute',
+              top: -50,
+              left: -50,
+              pointerEvents: 'none',
+              zIndex: 2
+            }}
+          >
+            {bubbleSkin.accessories.map((accessory, i) => (
+              <g key={`accessory-${i}`} dangerouslySetInnerHTML={{
+                __html: renderBubbleAccessory({
+                  ...accessory,
+                  x: headSize/2 + 50 + (accessory.x * headScale),
+                  y: headSize/2 + 50 + (accessory.y * headScale)
+                }, headSize)
+              }} />
+            ))}
+          </svg>
+        )}
+
+        <div className="character-head" style={{...headStyle, position: 'relative', zIndex: 1}}>
+          {!webcamError ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="webcam-feed"
+            />
+          ) : (
+            <div
+              className="webcam-error"
+              onClick={() => window.location.reload()}
+              style={{ cursor: 'pointer', fontSize: `${30 * headScale}px` }}
+              title="Click to retry camera"
+            >
+              📷
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const renderSquare = () => {
     const bodyScale = characterSize / 100;
